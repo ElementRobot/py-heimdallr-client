@@ -5,16 +5,17 @@ from subprocess import Popen, PIPE
 from threading import Event
 from time import sleep
 
-from heimdallr_client import Provider, Consumer
+from heimdallr_client import Client, Provider, Consumer
 
 
 # Setup test server
 DIR = os.path.dirname(os.path.realpath(__file__))
 PORT = 3000
-URL = 'http://localhost:%s' % PORT
 UUID = 'c7528fa8-0a7b-4486-bbdc-460905ffa035'
 server_filepath = os.path.join(DIR, 'server.js')
 stdin = Popen('PORT=%s node %s' % (PORT, server_filepath), shell=True, stdin=PIPE).stdin
+
+Client.url = 'http://localhost:%s' % PORT
 
 
 class HeimdallrClientTestCase(unittest.TestCase):
