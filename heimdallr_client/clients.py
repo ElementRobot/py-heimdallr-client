@@ -1,32 +1,11 @@
-from socketIO_client import SocketIO, SocketIONamespace, TRANSPORTS, parse_host, prepare_http_session
+from urlparse import urlparse
+from socketIO_client import SocketIO, SocketIONamespace
+
+from exceptions import HeimdallrClientException
+from utils import timestamp, for_all_methods, on_ready
 
 
-class _SocketIO(SocketIO):
-    def __init__(
-            self,
-            host,
-            port=None,
-            Namespace=SocketIONamespace,
-            wait_for_connection=True,
-            transports=TRANSPORTS,
-            resource='socket.io',
-            hurry_interval_in_seconds=1,
-            **kwargs):
-        self._namespace_by_path = {}
-        self._callback_by_ack_id = {}
-        self._ack_id = 0
-        self._is_secure, self._url = parse_host(host, port, resource)
-        self._wait_for_connection = wait_for_connection
-        self._client_transports = transports
-        self._hurry_interval_in_seconds = hurry_interval_in_seconds
-        self._http_session = prepare_http_session(kwargs)
-
-        self._log_name = self._url
-        self._wants_to_close = False
-        self._opened = False
-
-        if Namespace:
-            self.define(Namespace)
+__all__ = ['Client', 'Provider', 'Consumer']
 
 
 class Client(object):
@@ -38,17 +17,98 @@ class Client(object):
         self.ready = False
         self.ready_callbacks = []
         self.token = token
+        self.connection = SocketIONamespace(None, self.namespace)
+
+        @self.on('err')
+        def fn(err):
+            if 'message' in err:
+                raise HeimdallrClientException(err['message'])
+            else:
+                raise HeimdallrClientException(err)
+
+        @self.on('auth-success')
+        def fn(*args):
+            self.ready = True
+            while self.ready_callbacks:
+                self.ready_callbacks.pop(0)()
+
+        @self.on('connect')
+        def fn(*args):
+            self.connection.emit('authorize', {'token': self.token, 'authSource': self.auth_source})
 
     def connect(self):
-        pass
+        parsed = urlparse(self.url)
+        self.connection._io = SocketIO(parsed.hostname, parsed.port)
+        self.connection._io._namespace = self.connection
 
-    def on(self, packet_type, callback=None):
-        pass
+        return self
+
+    def on(self, message_name, callback=None):
+        if callback is None:
+            # Decorator syntax
+            def decorator(fn):
+                self.connection.on(message_name, fn)
+            return decorator
+
+        # SocketIO-Client syntax
+        self.connection.on(message_name, callback)
+        return self
+
+    def remove_listener(self, message_name):
+        self.connection._callback_by_event.pop(message_name, None)
+        attr_name = 'on_' + message_name.replace(' ', '_')
+        if hasattr(self.connection, attr_name):
+            delattr(self.connection, attr_name)
 
 
+@for_all_methods(on_ready)
 class Provider(Client):
     namespace = '/provider'
 
+    def send_event(self, subtype, data=None):
+        self.connection.emit('event', {'subtype': subtype, 'data': data, 't': timestamp()})
 
+    def send_sensor(self, subtype, data=None):
+        self.connection.emit('sensor', {'subtype': subtype, 'data': data, 't': timestamp()})
+
+    def send_stream(self, data):
+        self.connection.emit('stream', data)
+
+    def completed(self, uuid):
+        self.connection.emit('event', {'subtype': 'completed', 'data': uuid, 't': timestamp()})
+
+
+@for_all_methods(on_ready)
 class Consumer(Client):
     namespace = '/consumer'
+
+    def send_control(self, uuid, subtype, data=None, persistent=False):
+        self.connection.emit('control', {'provider': uuid, 'subtype': subtype, 'data': data, 'persistent': persistent})
+
+    def subscribe(self, uuid):
+        self.connection.emit('subscribe', {'provider': uuid})
+
+    def unsubscribe(self, uuid):
+        self.connection.emit('unsubscribe', {'provider': uuid})
+
+    def set_filter(self, uuid, filter_):
+        if not isinstance(filter_, dict):
+            raise TypeError('filter_ must be a dict not a %s' % type(filter_).__name__)
+
+        if not isinstance(filter_.get('event'), list) and not isinstance(filter_.get('sensor'), list):
+            raise TypeError('Either `event` or `sensor` must be a list')
+
+        filter_['provider'] = uuid
+        self.connection.emit('setFilter', filter_)
+
+    def get_state(self, uuid, subtypes):
+        if not isinstance(subtypes, list):
+            raise TypeError('`subtypes` must be a list')
+
+        self.connection.emit('getState', {'provider': uuid, 'subtypes': subtypes})
+
+    def join_stream(self, uuid):
+        self.connection.emit('joinStream', {'provider': uuid})
+
+    def leave_stream(self, uuid):
+        self.connection.emit('leaveStream', {'provider': uuid})

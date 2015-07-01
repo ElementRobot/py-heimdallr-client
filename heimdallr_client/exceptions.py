@@ -1,0 +1,2 @@
+class HeimdallrClientException(Exception):
+    pass

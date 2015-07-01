@@ -34,8 +34,8 @@ class HeimdallrClientTestCase(unittest.TestCase):
         if not self.packet_received.wait(3):
             self.fail('Timeout reached')
 
-    def trigger(self, packet_type):
-        stdin.write(json.dumps({'action': 'send-%s' % packet_type, 'client': self.client_type}))
+    def trigger(self, kind):
+        stdin.write(json.dumps({'action': 'send-%s' % kind, 'client': self.client_type}))
         stdin.flush()
 
 
@@ -50,11 +50,11 @@ class ProviderTestCase(HeimdallrClientTestCase):
         super(ProviderTestCase, self).tearDown()
 
     def test_receives_packets(self):
-        def callback(data):
+        def fn(data):
             self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
             self.packet_received.set()
 
-        self.client.on('ping', callback)
+        self.client.on('ping', fn)
         self.trigger('ping')
         self.wait_for_packet()
 
@@ -63,7 +63,7 @@ class ProviderTestCase(HeimdallrClientTestCase):
 
     def test_decorates_callbacks(self):
         @self.client.on('ping')
-        def callback(data):
+        def fn(data):
             self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
             self.packet_received.set()
 
@@ -85,12 +85,12 @@ class ProviderTestCase(HeimdallrClientTestCase):
         provider = Provider('valid-token')
 
         @provider.on('heardEvent')
-        def callback(data):
+        def fn(data):
             self.assertTrue(self.client.ready, 'Provider was not ready')
             self.heard_event = True
 
         @provider.on('heardSensor')
-        def callback(data):
+        def fn(data):
             self.assertTrue(self.heard_event, 'Order was not preserved')
             self.packet_received.set()
 
@@ -112,7 +112,7 @@ class ProviderTestCase(HeimdallrClientTestCase):
 
     def test_snake_case_off(self):
         @self.client.on('snakeCasePacket')
-        def callback(data):
+        def fn(data):
             self.assertDictEqual(data, {'caseTest': {'receivedUnderscore': True}}, 'Case conversion failed')
             self.packet_received.set()
 
@@ -125,7 +125,7 @@ class ProviderTestCase(HeimdallrClientTestCase):
     def test_snake_case_on(self):
         self.client.snake_case = True
         @self.client.on('snake_case_packet')
-        def callback(data):
+        def fn(data):
             self.assertDictEqual(data, {'case_test': {'received_underscore': False}}, 'Case conversion failed')
             self.packet_received.set()
 
@@ -147,11 +147,11 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         super(ConsumerTestCase, self).tearDown()
 
     def test_receives_packets(self):
-        def callback(data):
+        def fn(data):
             self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
             self.packet_received.set()
 
-        self.client.on('ping', callback)
+        self.client.on('ping', fn)
         self.trigger('ping')
         self.wait_for_packet()
 
@@ -160,7 +160,7 @@ class ConsumerTestCase(HeimdallrClientTestCase):
 
     def test_decorates_callbacks(self):
         @self.client.on('ping')
-        def callback(data):
+        def fn(data):
             self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
             self.packet_received.set()
 
@@ -177,7 +177,7 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         consumer = Consumer('valid-token')
 
         @consumer.on('heardControl')
-        def callback(data):
+        def fn(data):
             self.assertTrue(self.client.ready, 'Provider was not ready')
             self.heard_event = True
 
@@ -207,7 +207,7 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         self.count = 0
 
         @self.client.on('checkedPacket')
-        def callback(data):
+        def fn(data):
             self.count += 1
             if self.count == len(subscription_actions):
                 self.packet_received.set()
@@ -215,4 +215,23 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         for action in subscription_actions:
             getattr(self.client, action)(UUID)
 
+        self.wait_for_packet()
+
+    def test_snake_case_off(self):
+        @self.client.on('snakeCasePacket')
+        def fn(data):
+            self.assertDictEqual(data, {'caseTest': {'receivedUnderscore': True}}, 'Case conversion failed')
+            self.packet_received.set()
+
+        self.client.send_control(UUID, 'snake_case')
+        self.wait_for_packet()
+
+    def test_snake_case_on(self):
+        self.client.snake_case = True
+        @self.client.on('snake_case_packet')
+        def fn(data):
+            self.assertDictEqual(data, {'case_test': {'received_underscore': False}}, 'Case conversion failed')
+            self.packet_received.set()
+
+        self.client.send_control(UUID, 'snake_case')
         self.wait_for_packet()
