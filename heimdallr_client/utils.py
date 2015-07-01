@@ -7,8 +7,8 @@ def timestamp():
     return datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-@wraps
 def on_ready(fn):
+    @wraps(fn)
     def decorate(self, *args, **kwargs):
         if self.ready:
             fn(*args, **kwargs)
@@ -19,10 +19,13 @@ def on_ready(fn):
 
 
 # From http://stackoverflow.com/a/30764825/4059062
-@wraps
-def for_all_methods(decorator):
+def for_own_methods(decorator):
+    @wraps(decorator)
     def decorate(cls):
-        for name, method in inspect.getmembers(cls, inspect.ismethod):
+        def predicate(member):
+            return inspect.ismethod(member) and member.__name__ in cls.__dict__
+
+        for name, method in inspect.getmembers(cls, predicate):
             setattr(cls, name, decorator(method))
         return cls
 

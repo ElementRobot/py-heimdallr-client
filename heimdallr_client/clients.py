@@ -2,7 +2,7 @@ from urlparse import urlparse
 from socketIO_client import SocketIO, SocketIONamespace
 
 from exceptions import HeimdallrClientException
-from utils import timestamp, for_all_methods, on_ready
+from utils import timestamp, for_own_methods, on_ready
 
 
 __all__ = ['Client', 'Provider', 'Consumer']
@@ -61,7 +61,7 @@ class Client(object):
             delattr(self.connection, attr_name)
 
 
-@for_all_methods(on_ready)
+@for_own_methods(on_ready)
 class Provider(Client):
     namespace = '/provider'
 
@@ -78,7 +78,7 @@ class Provider(Client):
         self.connection.emit('event', {'subtype': 'completed', 'data': uuid, 't': timestamp()})
 
 
-@for_all_methods(on_ready)
+@for_own_methods(on_ready)
 class Consumer(Client):
     namespace = '/consumer'
 
