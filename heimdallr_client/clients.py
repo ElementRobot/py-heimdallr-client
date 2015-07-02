@@ -1,11 +1,21 @@
 from urlparse import urlparse
-from socketIO_client import SocketIO, SocketIONamespace
+from socketIO_client import SocketIO, SocketIONamespace, EngineIONamespace
 
 from exceptions import HeimdallrClientException
 from utils import timestamp, for_own_methods, on_ready
 
 
 __all__ = ['Client', 'Provider', 'Consumer']
+
+
+def _init(self, io):
+    self._io = io
+    self._callback_by_event = {}
+    self._log_name = Client.url
+    self.initialize()
+
+
+EngineIONamespace.__init__ = _init
 
 
 class Client(object):
