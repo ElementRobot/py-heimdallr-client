@@ -20,5 +20,5 @@ setup(
     ],
     keywords='heimdallr rtc websockets',
     packages=find_packages(exclude=['tests/*']),
-    install_requires=['socketIO-client']
+    install_requires=['socketIO-client', 'pyopenssl', 'ndg-httpsclient', 'pyasn1']
 )
