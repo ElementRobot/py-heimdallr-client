@@ -12,10 +12,23 @@ from heimdallr_client import Client, Provider, Consumer
 DIR = os.path.dirname(os.path.realpath(__file__))
 PORT = 3000
 UUID = 'c7528fa8-0a7b-4486-bbdc-460905ffa035'
-server_filepath = os.path.join(DIR, 'server.js')
-stdin = Popen('PORT=%s node %s' % (PORT, server_filepath), shell=True, stdin=PIPE).stdin
 
 Client.url = 'http://localhost:%s' % PORT
+shared = {}
+
+
+def setUpModule():
+    server_filepath = os.path.join(DIR, 'server.js')
+    shared['pipe'] = Popen('PORT=%s node %s' % (PORT, server_filepath), shell=True, stdin=PIPE, stdout=PIPE)
+    shared['stdin'] = shared['pipe'].stdin
+    print shared['pipe'].stdout.readline()
+
+
+def tearDownModule():
+    shared['stdin'].write('%s\n' % json.dumps('close'))
+    shared['stdin'].flush()
+    output = shared['pipe'].communicate(3)
+    print 'SERVER OUTPUT: %s' % output
 
 
 class HeimdallrClientTestCase(unittest.TestCase):
@@ -31,12 +44,12 @@ class HeimdallrClientTestCase(unittest.TestCase):
         self.packet_received.set()
 
     def wait_for_packet(self):
-        if not self.packet_received.wait(3):
+        if not self.packet_received.wait(1):
             self.fail('Timeout reached')
 
     def trigger(self, kind):
-        stdin.write(json.dumps({'action': 'send-%s' % kind, 'client': self.client_type}))
-        stdin.flush()
+        shared['stdin'].write('%s\n' % json.dumps({'action': 'send-%s' % kind, 'client': self.client_type}))
+        shared['stdin'].flush()
 
 
 class ProviderTestCase(HeimdallrClientTestCase):

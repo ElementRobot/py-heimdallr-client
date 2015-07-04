@@ -1,12 +1,13 @@
 "use strict";
 
-var PORT = process.env.port,
+var PORT = process.env.PORT,
     io = require('socket.io').listen(PORT),
     _ = require('lodash'),
+    readline = require('readline'),
     validator = require('heimdallr-validator');
 
 var sockets = {},
-    inputChunks = [];
+    input;
 
 io.of('/provider').on('connect', function (socket) {
     sockets.provider = socket;
@@ -103,18 +104,23 @@ io.of('/consumer').on('connect', function (socket) {
         .on('leaveStream', checkConsumerPacket);
 });
 
-process.stdin.resume();
-process.stdin.on('data', function (chunk) {
-    inputChunks.push(chunk);
+input = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
 });
-process.stdin.on('end', function () {
-    var message = JSON.parse(inputChunks.join('')),
+
+input.on('line', function (line) {
+    var message = JSON.parse(line),
         client = sockets[message.client];
-    inputChunks = [];
 
     if (message.action === 'send-ping') {
         client.emit('ping', {ping: 'data'});
     } else if (message.action === 'send-error') {
         client.emit('err', {error: 'data'});
+    } else if (message === 'close') {
+        input.close();
+        process.exit();
     }
 });
+
+console.log('SERVER READY');
