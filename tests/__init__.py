@@ -123,15 +123,47 @@ class ProviderTestCase(HeimdallrClientTestCase):
         def fn(*args):
             self.packet_received.set()
 
-        provider.send_event('test')
-        provider.send_sensor('test')
+        provider.send_event('test').send_sensor('test')
         provider.connect()
         self.wait_for_packet(provider)
 
+    def test_multiple_listeners(self):
+        self.called_first = False
+
+        @self.provider.on('ping')
+        def fn(*args):
+            self.called_first = True
+
+        @self.provider.on('ping')
+        def fn(*args):
+            self.assertTrue(self.called_first, 'Order was not preserved')
+            self.set_packet_received()
+
+        self.trigger('ping')
+        self.wait_for_packet()
+
     def test_remove_listener(self):
-        self.provider.remove_listener('err')
-        self.provider.on('err', self.set_packet_received)
-        self.trigger('JSON-error')
+        def callback(*args):
+            self.fail('Called removed listener')
+
+        @self.provider.on('ping')
+        def fn(*args):
+            callback()
+
+        @self.provider.on('ping')
+        def fn(*args):
+            callback()
+
+        self.provider.remove_listener('ping')
+
+        self.provider.on('ping', callback)
+
+        @self.provider.on('ping')
+        def fn(*args):
+            self.set_packet_received()
+
+        self.provider.remove_listener('ping', callback)
+        self.trigger('ping')
         self.wait_for_packet()
 
     def test_completes_control(self):
@@ -222,16 +254,48 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         def fn(*args):
             self.packet_received.set()
 
-        consumer.send_control(UUID, 'test')
-        consumer.subscribe(UUID)
+        consumer.send_control(UUID, 'test').subscribe(UUID)
         consumer.connect()
         consumer.send_control(UUID, 'ping')
         self.wait_for_packet(consumer)
 
+    def test_multiple_listeners(self):
+        self.called_first = False
+
+        @self.consumer.on('ping')
+        def fn(*args):
+            self.called_first = True
+
+        @self.consumer.on('ping')
+        def fn(*args):
+            self.assertTrue(self.called_first, 'Order was not preserved')
+            self.set_packet_received()
+
+        self.trigger('ping')
+        self.wait_for_packet()
+
     def test_remove_listener(self):
-        self.consumer.remove_listener('err')
-        self.consumer.on('err', self.set_packet_received)
-        self.trigger('JSON-error')
+        def callback(*args):
+            self.fail('Called removed listener')
+
+        @self.consumer.on('ping')
+        def fn(*args):
+            callback()
+
+        @self.consumer.on('ping')
+        def fn(*args):
+            callback()
+
+        self.consumer.remove_listener('ping')
+
+        self.consumer.on('ping', callback)
+
+        @self.consumer.on('ping')
+        def fn(*args):
+            self.set_packet_received()
+
+        self.consumer.remove_listener('ping', callback)
+        self.trigger('ping')
         self.wait_for_packet()
 
     def test_set_filter(self):

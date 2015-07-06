@@ -1,5 +1,6 @@
 from threading import _Event
 from urlparse import urlparse
+from functools import partial
 from socketIO_client import SocketIO, SocketIONamespace, EngineIONamespace
 
 from exceptions import HeimdallrClientException
@@ -20,20 +21,12 @@ EngineIONamespace.__init__ = _init
 
 
 class _SocketIO(SocketIO):
-    def _should_stop_waiting(self, for_connect=False, for_callbacks=False, event=None):
-        if for_connect:
-            for namespace in self._namespace_by_path.values():
-                is_namespace_connected = getattr(
-                    namespace, '_connected', False)
-                if not is_namespace_connected:
-                    return False
-            return True
-        if for_callbacks and not self._has_ack_callback:
-            return True
+    def _should_stop_waiting(self, **kwargs):
+        event = kwargs.pop('event', None)
         event_set = False
         if isinstance(event, _Event):
             event_set = event.is_set()
-        return super(SocketIO, self)._should_stop_waiting() or event_set
+        return super(_SocketIO, self)._should_stop_waiting(**kwargs) or event_set
 
 
 class Client(object):
@@ -44,6 +37,7 @@ class Client(object):
     def __init__(self, token, **kwargs):
         self.ready = False
         self.ready_callbacks = []
+        self.callbacks = {}
         self.token = token
         self.connection = SocketIONamespace(None, self.namespace)
 
@@ -67,6 +61,8 @@ class Client(object):
     def wait(self, **kwargs):
         self.connection._io.wait(**kwargs)
 
+        return self
+
     def connect(self):
         parsed = urlparse(self.url)
         self.connection._io = _SocketIO(parsed.hostname, parsed.port)
@@ -77,19 +73,37 @@ class Client(object):
 
         return self
 
+    def __wrap_callback(self, message_name, *args, **kwargs):
+        callbacks = self.callbacks.get(message_name, [])
+        for callback in callbacks:
+            callback(*args, **kwargs)
+
+    def __on(self, message_name, callback):
+        self.callbacks.setdefault(message_name, [])
+        self.callbacks[message_name].append(callback)
+
     def on(self, message_name, callback=None):
+        # Decorator syntax
         if callback is None:
-            # Decorator syntax
             def decorator(fn):
-                self.connection.on(message_name, fn)
+                self.__on(message_name, fn)
+                self.connection.on(message_name, partial(self.__wrap_callback, message_name))
             return decorator
 
         # SocketIO-Client syntax
-        self.connection.on(message_name, callback)
+        self.__on(message_name, callback)
+        self.connection.on(message_name, partial(self.__wrap_callback, message_name))
+
         return self
 
-    def remove_listener(self, message_name):
-        self.connection._callback_by_event.pop(message_name, None)
+    def remove_listener(self, message_name, callback=None):
+        if callback:
+            while callback in self.callbacks.get(message_name, []):
+                self.callbacks[message_name].remove(callback)
+        else:
+            self.callbacks.pop(message_name, None)
+
+        return self
 
 
 @for_own_methods(on_ready)

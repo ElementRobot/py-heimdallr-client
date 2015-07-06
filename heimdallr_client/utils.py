@@ -14,6 +14,7 @@ def on_ready(fn):
             fn(self, *args, **kwargs)
         else:
             self.ready_callbacks.append(partial(fn, self, *args, **kwargs))
+        return self
 
     return decorate
 
