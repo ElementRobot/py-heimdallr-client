@@ -184,7 +184,7 @@ class ProviderTestCase(HeimdallrClientTestCase):
         self.wait_for_packet()
 
     def test_snake_case_on(self):
-        self.provider.snake_case = True
+        self.provider.__snake_case = True
         @self.provider.on('snake_case_packet')
         def fn(data):
             self.assertDictEqual(data, {'case_test': {'received_underscore': False}}, 'Case conversion failed')
@@ -333,7 +333,7 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         self.wait_for_packet()
 
     def test_snake_case_on(self):
-        self.consumer.snake_case = True
+        self.consumer.__snake_case = True
         @self.consumer.on('snake_case_packet')
         def fn(data):
             self.assertDictEqual(data, {'case_test': {'received_underscore': False}}, 'Case conversion failed')

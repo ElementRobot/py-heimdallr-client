@@ -1,10 +1,11 @@
 from threading import _Event
 from urlparse import urlparse
 from functools import partial
+from pydash.strings import snake_case, camel_case
 from socketIO_client import SocketIO, SocketIONamespace, EngineIONamespace
 
 from exceptions import HeimdallrClientException
-from utils import timestamp, for_own_methods, on_ready
+from utils import timestamp, for_own_methods, on_ready, map_keys, preserve_case
 
 
 __all__ = ['Client', 'Provider', 'Consumer']
@@ -38,6 +39,7 @@ class Client(object):
         self.ready = False
         self.ready_callbacks = []
         self.callbacks = {}
+        self.__snake_case = False
         self.token = token
         self.connection = SocketIONamespace(None, self.namespace)
 
@@ -56,12 +58,18 @@ class Client(object):
 
         @self.on('connect')
         def fn(*args):
-            self.connection.emit('authorize', {'token': self.token, 'authSource': self.auth_source})
+            self.__emit('authorize', {'token': self.token, 'authSource': self.auth_source})
 
-    def wait(self, **kwargs):
-        self.connection._io.wait(**kwargs)
+    @property
+    def snake_case(self, value):
+        self.__snake_case = bool(value)
+        self.callbacks = map_keys(self.callbacks, self.__to_server)
 
-        return self
+    def __to_server(self, string):
+        return camel_case(string) if self.__snake_case else string
+
+    def __to_client(self, string):
+        return snake_case(string) if self.__snake_case else string
 
     def connect(self):
         parsed = urlparse(self.url)
@@ -73,16 +81,32 @@ class Client(object):
 
         return self
 
-    def __wrap_callback(self, message_name, *args, **kwargs):
+    def wait(self, **kwargs):
+        self.connection._io.wait(**kwargs)
+
+        return self
+
+    def __emit(self, message_name, data):
+        message_name = self.__to_server(message_name)
+        data = map_keys(data, self.__to_server)
+
+        self.connection.emit(message_name, data)
+
+    def __wrap_callback(self, message_name, *args):
+        message_name = self.__to_client(message_name)
+        args = map(lambda item: map_keys(item, self.__to_client), args)
+
         callbacks = self.callbacks.get(message_name, [])
         for callback in callbacks:
-            callback(*args, **kwargs)
+            callback(*args)
 
     def __on(self, message_name, callback):
         self.callbacks.setdefault(message_name, [])
         self.callbacks[message_name].append(callback)
 
     def on(self, message_name, callback=None):
+        message_name = self.__to_server(message_name)
+
         # Decorator syntax
         if callback is None:
             def decorator(fn):
@@ -111,16 +135,16 @@ class Provider(Client):
     namespace = '/provider'
 
     def send_event(self, subtype, data=None):
-        self.connection.emit('event', {'subtype': subtype, 'data': data, 't': timestamp()})
+        self.__emit('event', {'subtype': subtype, 'data': data, 't': timestamp()})
 
     def send_sensor(self, subtype, data=None):
-        self.connection.emit('sensor', {'subtype': subtype, 'data': data, 't': timestamp()})
+        self.__emit('sensor', {'subtype': subtype, 'data': data, 't': timestamp()})
 
     def send_stream(self, data):
-        self.connection.emit('stream', data)
+        self.__emit('stream', data)
 
     def completed(self, uuid):
-        self.connection.emit('event', {'subtype': 'completed', 'data': uuid, 't': timestamp()})
+        self.__emit('event', {'subtype': 'completed', 'data': uuid, 't': timestamp()})
 
 
 @for_own_methods(on_ready)
@@ -128,23 +152,23 @@ class Consumer(Client):
     namespace = '/consumer'
 
     def send_control(self, uuid, subtype, data=None, persistent=False):
-        self.connection.emit('control', {'provider': uuid, 'subtype': subtype, 'data': data, 'persistent': persistent})
+        self.__emit('control', {'provider': uuid, 'subtype': subtype, 'data': data, 'persistent': persistent})
 
     def subscribe(self, uuid):
-        self.connection.emit('subscribe', {'provider': uuid})
+        self.__emit('subscribe', {'provider': uuid})
 
     def unsubscribe(self, uuid):
-        self.connection.emit('unsubscribe', {'provider': uuid})
+        self.__emit('unsubscribe', {'provider': uuid})
 
     def set_filter(self, uuid, filter_):
         filter_['provider'] = uuid
-        self.connection.emit('setFilter', filter_)
+        self.__emit('setFilter', filter_)
 
     def get_state(self, uuid, subtypes):
-        self.connection.emit('getState', {'provider': uuid, 'subtypes': subtypes})
+        self.__emit('getState', {'provider': uuid, 'subtypes': subtypes})
 
     def join_stream(self, uuid):
-        self.connection.emit('joinStream', {'provider': uuid})
+        self.__emit('joinStream', {'provider': uuid})
 
     def leave_stream(self, uuid):
-        self.connection.emit('leaveStream', {'provider': uuid})
+        self.__emit('leaveStream', {'provider': uuid})
