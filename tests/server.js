@@ -31,6 +31,8 @@ io.of('/provider').on('connect', function (socket) {
                 socket.emit('err', 'errorTriggered');
             } else if (packet.subtype === 'ping') {
                 socket.emit('pong');
+            } else if (packet.subtype === 'completed') {
+                socket.emit('completedControl');
             }
         });
     }).on('sensor', function (packet) {

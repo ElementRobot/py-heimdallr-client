@@ -1,3 +1,4 @@
+from threading import _Event
 from urlparse import urlparse
 from socketIO_client import SocketIO, SocketIONamespace, EngineIONamespace
 
@@ -16,6 +17,23 @@ def _init(self, io):
 
 
 EngineIONamespace.__init__ = _init
+
+
+class _SocketIO(SocketIO):
+    def _should_stop_waiting(self, for_connect=False, for_callbacks=False, event=None):
+        if for_connect:
+            for namespace in self._namespace_by_path.values():
+                is_namespace_connected = getattr(
+                    namespace, '_connected', False)
+                if not is_namespace_connected:
+                    return False
+            return True
+        if for_callbacks and not self._has_ack_callback:
+            return True
+        event_set = False
+        if isinstance(event, _Event):
+            event_set = event.is_set()
+        return super(SocketIO, self)._should_stop_waiting() or event_set
 
 
 class Client(object):
@@ -46,12 +64,12 @@ class Client(object):
         def fn(*args):
             self.connection.emit('authorize', {'token': self.token, 'authSource': self.auth_source})
 
-    def wait(self, *args, **kwargs):
-        self.connection._io.wait(*args, **kwargs)
+    def wait(self, **kwargs):
+        self.connection._io.wait(**kwargs)
 
     def connect(self):
         parsed = urlparse(self.url)
-        self.connection._io = SocketIO(parsed.hostname, parsed.port)
+        self.connection._io = _SocketIO(parsed.hostname, parsed.port)
         self.connection._io._namespace = self.connection
         self.connection._io._namespace_by_path[self.namespace] = self.connection
         self.connection._io.connect(self.namespace)
