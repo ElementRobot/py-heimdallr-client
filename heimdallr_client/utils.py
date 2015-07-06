@@ -31,22 +31,3 @@ def for_own_methods(decorator):
         return cls
 
     return decorate
-
-
-def map_keys(dictionary, fn):
-    if not isinstance(dictionary, dict):
-        return dictionary
-
-    new = {}
-
-    for key, value in dictionary.iteritems():
-        key = fn(key)
-        if isinstance(value, dict):
-            value = map_keys(value, fn)
-        new[key] = value
-
-    return new
-
-
-def preserve_case(string):
-    return string
