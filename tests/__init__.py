@@ -44,7 +44,8 @@ class HeimdallrClientTestCase(unittest.TestCase):
         self.packet_received.set()
 
     def wait_for_packet(self):
-        if not self.packet_received.wait(1):
+        self.client.wait(2)
+        if not self.packet_received.is_set():
             self.fail('Timeout reached')
 
     def trigger(self, kind):

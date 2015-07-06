@@ -46,10 +46,16 @@ class Client(object):
         def fn(*args):
             self.connection.emit('authorize', {'token': self.token, 'authSource': self.auth_source})
 
+    def wait(self, *args, **kwargs):
+        self.connection._io.wait(*args, **kwargs)
+
     def connect(self):
         parsed = urlparse(self.url)
         self.connection._io = SocketIO(parsed.hostname, parsed.port)
         self.connection._io._namespace = self.connection
+        self.connection._io._namespace_by_path[self.namespace] = self.connection
+        self.connection._io.connect(self.namespace)
+        self.connection._io.wait(for_connect=True)
 
         return self
 

@@ -11,9 +11,9 @@ def on_ready(fn):
     @wraps(fn)
     def decorate(self, *args, **kwargs):
         if self.ready:
-            fn(*args, **kwargs)
+            fn(self, *args, **kwargs)
         else:
-            self.ready_callbacks.append(partial(fn, *args, **kwargs))
+            self.ready_callbacks.append(partial(fn, self, *args, **kwargs))
 
     return decorate
 
