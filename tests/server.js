@@ -25,11 +25,7 @@ io.of('/provider').on('connect', function (socket) {
                 return;
             }
             socket.emit('heardEvent', packet);
-            if (packet.subtype === 'triggerAuthSuccess') {
-                socket.emit('auth-success');
-            } else if (packet.subtype === 'triggerError') {
-                socket.emit('err', 'errorTriggered');
-            } else if (packet.subtype === 'ping') {
+            if (packet.subtype === 'ping') {
                 socket.emit('pong');
             } else if (packet.subtype === 'completed') {
                 socket.emit('completedControl');
@@ -43,6 +39,10 @@ io.of('/provider').on('connect', function (socket) {
             }
             socket.emit('heardSensor', packet);
         });
+    }).on('stream', function (data) {
+        if (data === '!') {
+            socket.emit('heardStream');
+        }
     });
 });
 
@@ -75,11 +75,7 @@ io.of('/consumer').on('connect', function (socket) {
                 return;
             }
             socket.emit('heardControl', packet);
-            if (packet.subtype === 'triggerAuthSuccess') {
-                socket.emit('auth-success');
-            } else if (packet.subtype === 'triggerError') {
-                socket.emit('err', 'errorTriggered');
-            } else if (packet.subtype === 'ping') {
+            if (packet.subtype === 'ping') {
                 socket.emit('pong');
             }
         });
@@ -117,8 +113,10 @@ input.on('line', function (line) {
 
     if (message.action === 'send-ping') {
         client.emit('ping', {ping: 'data'});
-    } else if (message.action === 'send-error') {
-        client.emit('err', {error: 'data'});
+    } else if (message.action === 'send-JSON-error') {
+        client.emit('err', {message: 'error'});
+    } else if (message.action === 'send-js-error') {
+        client.emit('err', new Error('error'));
     } else if (message === 'close') {
         input.close();
         process.exit();

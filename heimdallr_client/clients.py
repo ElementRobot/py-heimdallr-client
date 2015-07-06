@@ -90,9 +90,6 @@ class Client(object):
 
     def remove_listener(self, message_name):
         self.connection._callback_by_event.pop(message_name, None)
-        attr_name = 'on_' + message_name.replace(' ', '_')
-        if hasattr(self.connection, attr_name):
-            delattr(self.connection, attr_name)
 
 
 @for_own_methods(on_ready)
@@ -126,19 +123,10 @@ class Consumer(Client):
         self.connection.emit('unsubscribe', {'provider': uuid})
 
     def set_filter(self, uuid, filter_):
-        if not isinstance(filter_, dict):
-            raise TypeError('filter_ must be a dict not a %s' % type(filter_).__name__)
-
-        if not isinstance(filter_.get('event'), list) and not isinstance(filter_.get('sensor'), list):
-            raise TypeError('Either `event` or `sensor` must be a list')
-
         filter_['provider'] = uuid
         self.connection.emit('setFilter', filter_)
 
     def get_state(self, uuid, subtypes):
-        if not isinstance(subtypes, list):
-            raise TypeError('`subtypes` must be a list')
-
         self.connection.emit('getState', {'provider': uuid, 'subtypes': subtypes})
 
     def join_stream(self, uuid):
