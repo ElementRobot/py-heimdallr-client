@@ -171,31 +171,6 @@ class ProviderTestCase(HeimdallrClientTestCase):
         self.provider.completed('test')
         self.wait_for_packet()
 
-    def test_snake_case_off(self):
-        @self.provider.on('snakeCasePacket')
-        def fn(data):
-            self.assertDictEqual(data, {'caseTest': {'receivedUnderscore': True}}, 'Case conversion failed')
-            self.packet_received.set()
-
-        self.provider.send_event('snake_case')
-        self.wait_for_packet()
-        self.packet_received.clear()
-        self.provider.send_sensor('snake_case')
-        self.wait_for_packet()
-
-    def test_snake_case_on(self):
-        self.provider.snake_case = True
-        @self.provider.on('snake_case_packet')
-        def fn(data):
-            self.assertDictEqual(data, {'case_test': {'received_underscore': False}}, 'Case conversion failed')
-            self.packet_received.set()
-
-        self.provider.send_event('snake_case')
-        self.wait_for_packet()
-        self.packet_received.clear()
-        self.provider.send_sensor('snake_case')
-        self.wait_for_packet()
-
 
 class ConsumerTestCase(HeimdallrClientTestCase):
     def setUp(self):
@@ -321,23 +296,4 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         for action in subscription_actions:
             getattr(self.consumer, action)(UUID)
 
-        self.wait_for_packet()
-
-    def test_snake_case_off(self):
-        @self.consumer.on('snakeCasePacket')
-        def fn(data):
-            self.assertDictEqual(data, {'caseTest': {'receivedUnderscore': True}}, 'Case conversion failed')
-            self.packet_received.set()
-
-        self.consumer.send_control(UUID, 'snake_case')
-        self.wait_for_packet()
-
-    def test_snake_case_on(self):
-        self.consumer.snake_case = True
-        @self.consumer.on('snake_case_packet')
-        def fn(data):
-            self.assertDictEqual(data, {'case_test': {'received_underscore': False}}, 'Case conversion failed')
-            self.packet_received.set()
-
-        self.consumer.send_control(UUID, 'snake_case')
         self.wait_for_packet()
