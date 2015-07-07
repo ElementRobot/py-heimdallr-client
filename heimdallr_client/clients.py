@@ -29,12 +29,12 @@ class _SocketIO(SocketIO):
         return super(_SocketIO, self)._should_stop_waiting(**kwargs) or event_set
 
 
-class Client(object):
+class Client():
     url = 'https://heimdallr.co'
     auth_source = 'heimdallr'
     namespace = '/'
 
-    def __init__(self, token, **kwargs):
+    def __init__(self, token):
         self.ready = False
         self.ready_callbacks = []
         self.callbacks = {}
