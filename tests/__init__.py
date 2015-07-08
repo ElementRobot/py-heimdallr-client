@@ -19,7 +19,12 @@ shared = {}
 
 def setUpModule():
     server_filepath = os.path.join(DIR, 'server.js')
-    shared['pipe'] = Popen('PORT=%s node %s' % (PORT, server_filepath), shell=True, stdin=PIPE, stdout=PIPE)
+    shared['pipe'] = Popen(
+        'PORT=%s node %s' % (PORT, server_filepath),
+        shell=True,
+        stdin=PIPE,
+        stdout=PIPE
+    )
     shared['stdin'] = shared['pipe'].stdin
     print shared['pipe'].stdout.readline()
 
@@ -46,12 +51,16 @@ class HeimdallrClientTestCase(unittest.TestCase):
 
     def wait_for_packet(self, client=None):
         client = client or self.client
-        client.wait(seconds=3, event=self.packet_received)
+        client.run(seconds=3, event=self.packet_received)
         if not self.packet_received.is_set():
             self.fail('Timeout reached')
 
     def trigger(self, kind):
-        shared['stdin'].write('%s\n' % json.dumps({'action': 'send-%s' % kind, 'client': self.client_type}))
+        shared['stdin'].write(
+            '%s\n' % json.dumps(
+                {'action': 'send-%s' % kind, 'client': self.client_type}
+            )
+        )
         shared['stdin'].flush()
 
 
@@ -68,7 +77,11 @@ class ProviderTestCase(HeimdallrClientTestCase):
 
     def test_receives_packets(self):
         def fn(data):
-            self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
+            self.assertDictEqual(
+                data,
+                {'ping': 'data'},
+                'Ping data did not match'
+            )
             self.packet_received.set()
 
         self.provider.on('ping', fn)
@@ -77,14 +90,24 @@ class ProviderTestCase(HeimdallrClientTestCase):
 
     def test_raises_exceptions(self):
         self.trigger('JSON-error')
-        self.assertRaises(HeimdallrClientException, partial(self.wait_for_packet, self.provider))
+        self.assertRaises(
+            HeimdallrClientException,
+            partial(self.wait_for_packet, self.provider)
+        )
         self.trigger('js-error')
-        self.assertRaises(HeimdallrClientException, partial(self.wait_for_packet, self.provider))
+        self.assertRaises(
+            HeimdallrClientException,
+            partial(self.wait_for_packet, self.provider)
+        )
 
     def test_decorates_callbacks(self):
         @self.provider.on('ping')
         def fn(data):
-            self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
+            self.assertDictEqual(
+                data,
+                {'ping': 'data'},
+                'Ping data did not match'
+            )
             self.packet_received.set()
 
         self.trigger('ping')
@@ -185,7 +208,11 @@ class ConsumerTestCase(HeimdallrClientTestCase):
 
     def test_receives_packets(self):
         def fn(data):
-            self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
+            self.assertDictEqual(
+                data,
+                {'ping': 'data'},
+                'Ping data did not match'
+            )
             self.packet_received.set()
 
         self.consumer.on('ping', fn)
@@ -194,14 +221,24 @@ class ConsumerTestCase(HeimdallrClientTestCase):
 
     def test_raises_exceptions(self):
         self.trigger('JSON-error')
-        self.assertRaises(HeimdallrClientException, partial(self.wait_for_packet, self.consumer))
+        self.assertRaises(
+            HeimdallrClientException,
+            partial(self.wait_for_packet, self.consumer)
+        )
         self.trigger('js-error')
-        self.assertRaises(HeimdallrClientException, partial(self.wait_for_packet, self.consumer))
+        self.assertRaises(
+            HeimdallrClientException,
+            partial(self.wait_for_packet, self.consumer)
+        )
 
     def test_decorates_callbacks(self):
         @self.consumer.on('ping')
         def fn(data):
-            self.assertDictEqual(data, {'ping': 'data'}, 'Ping data did not match')
+            self.assertDictEqual(
+                data,
+                {'ping': 'data'},
+                'Ping data did not match'
+            )
             self.packet_received.set()
 
         self.trigger('ping')
@@ -284,7 +321,12 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         self.wait_for_packet()
 
     def test_subscription_actions(self):
-        subscription_actions = ['subscribe', 'unsubscribe', 'join_stream', 'leave_stream']
+        subscription_actions = [
+            'subscribe',
+            'unsubscribe',
+            'join_stream',
+            'leave_stream'
+        ]
         self.count = 0
 
         @self.consumer.on('checkedPacket')

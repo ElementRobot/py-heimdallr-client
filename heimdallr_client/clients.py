@@ -26,7 +26,8 @@ class _SocketIO(SocketIO):
         event_set = False
         if isinstance(event, _Event):
             event_set = event.is_set()
-        return super(_SocketIO, self)._should_stop_waiting(**kwargs) or event_set
+        return super(_SocketIO, self)._should_stop_waiting(**kwargs) or \
+            event_set
 
 
 class Client():
@@ -56,20 +57,25 @@ class Client():
 
         @self.on('connect')
         def fn(*args):
-            self.connection.emit('authorize', {'token': self.token, 'authSource': self.auth_source})
+            self.connection.emit(
+                'authorize',
+                {'token': self.token, 'authSource': self.auth_source}
+            )
 
-    def wait(self, **kwargs):
+    def run(self, seconds=None, **kwargs):
+        kwargs['seconds'] = seconds
         self.connection._io.wait(**kwargs)
 
         return self
 
     def connect(self):
         parsed = urlparse(self.url)
-        self.connection._io = _SocketIO(parsed.hostname, parsed.port)
-        self.connection._io._namespace = self.connection
-        self.connection._io._namespace_by_path[self.namespace] = self.connection
-        self.connection._io.connect(self.namespace)
-        self.connection._io.wait(for_connect=True)
+        io = _SocketIO(parsed.hostname, parsed.port)
+        io._namespace = self.connection
+        io._namespace_by_path[self.namespace] = self.connection
+        io.connect(self.namespace)
+        io.wait(for_connect=True)
+        self.connection._io = io
 
         return self
 
@@ -87,12 +93,18 @@ class Client():
         if callback is None:
             def decorator(fn):
                 self.__on(message_name, fn)
-                self.connection.on(message_name, partial(self.__wrap_callback, message_name))
+                self.connection.on(
+                    message_name,
+                    partial(self.__wrap_callback, message_name)
+                )
             return decorator
 
         # SocketIO-Client syntax
         self.__on(message_name, callback)
-        self.connection.on(message_name, partial(self.__wrap_callback, message_name))
+        self.connection.on(
+            message_name,
+            partial(self.__wrap_callback, message_name)
+        )
 
         return self
 
@@ -111,16 +123,28 @@ class Provider(Client):
     namespace = '/provider'
 
     def send_event(self, subtype, data=None):
-        self.connection.emit('event', {'subtype': subtype, 'data': data, 't': timestamp()})
+        self.connection.emit(
+            'event',
+            {'subtype': subtype, 'data': data, 't': timestamp()}
+        )
 
     def send_sensor(self, subtype, data=None):
-        self.connection.emit('sensor', {'subtype': subtype, 'data': data, 't': timestamp()})
+        self.connection.emit(
+            'sensor',
+            {'subtype': subtype, 'data': data, 't': timestamp()}
+        )
 
     def send_stream(self, data):
-        self.connection.emit('stream', data)
+        self.connection.emit(
+            'stream',
+            data
+        )
 
     def completed(self, uuid):
-        self.connection.emit('event', {'subtype': 'completed', 'data': uuid, 't': timestamp()})
+        self.connection.emit(
+            'event',
+            {'subtype': 'completed', 'data': uuid, 't': timestamp()}
+        )
 
 
 @for_own_methods(on_ready)
@@ -128,23 +152,49 @@ class Consumer(Client):
     namespace = '/consumer'
 
     def send_control(self, uuid, subtype, data=None, persistent=False):
-        self.connection.emit('control', {'provider': uuid, 'subtype': subtype, 'data': data, 'persistent': persistent})
+        self.connection.emit(
+            'control',
+            {
+                'provider': uuid,
+                'subtype': subtype,
+                'data': data,
+                'persistent': persistent
+            }
+        )
 
     def subscribe(self, uuid):
-        self.connection.emit('subscribe', {'provider': uuid})
+        self.connection.emit(
+            'subscribe',
+            {'provider': uuid}
+        )
 
     def unsubscribe(self, uuid):
-        self.connection.emit('unsubscribe', {'provider': uuid})
+        self.connection.emit(
+            'unsubscribe',
+            {'provider': uuid}
+        )
 
     def set_filter(self, uuid, filter_):
         filter_['provider'] = uuid
-        self.connection.emit('setFilter', filter_)
+        self.connection.emit(
+            'setFilter',
+            filter_
+        )
 
     def get_state(self, uuid, subtypes):
-        self.connection.emit('getState', {'provider': uuid, 'subtypes': subtypes})
+        self.connection.emit(
+            'getState',
+            {'provider': uuid, 'subtypes': subtypes}
+        )
 
     def join_stream(self, uuid):
-        self.connection.emit('joinStream', {'provider': uuid})
+        self.connection.emit(
+            'joinStream',
+            {'provider': uuid}
+        )
 
     def leave_stream(self, uuid):
-        self.connection.emit('leaveStream', {'provider': uuid})
+        self.connection.emit(
+            'leaveStream',
+            {'provider': uuid}
+        )

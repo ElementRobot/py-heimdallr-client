@@ -3,6 +3,9 @@ from functools import wraps, partial
 from datetime import datetime
 
 
+__all__ = ['timestamp', 'on_ready', 'for_own_methods']
+
+
 def timestamp():
     return datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
