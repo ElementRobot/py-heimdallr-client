@@ -123,12 +123,12 @@ class Client():
         """
 
         parsed = urlparse(self._url)
-        io = _SocketIO(parsed.hostname, parsed.port)
+        self.connection._io = _SocketIO(parsed.hostname, parsed.port)
+        io = self.connection._io
         io._namespace = self.connection
         io._namespace_by_path[self._namespace] = self.connection
         io.connect(self._namespace)
         io.wait(for_connect=True)
-        self.connection._io = io
 
         return self
 
