@@ -31,10 +31,18 @@ class _SocketIO(SocketIO):
 
 
 class Client():
-    """ Base class for Heimdallr clients.
+    """
+    The ``Client`` class provides most of the behavior for
+    Heimdallr clients. However, it is not intended to be
+    used directly. The ``Client`` constructor creates the
+    basic connection which in this case is a
+    ``SocketIONamespace``. It sets up callbacks for
+    connection and authentication as well as a default
+    callback for errors. The default error handler can be
+    removed by ``client.remove_listener('err')``.
 
-    The ``Client`` class provides most of the behavior for Heimdallr clients.
-    However, it is not intended to be used directly.
+    Args:
+        token (str): Authentication token
     """
 
     _url = 'https://heimdallr.co'
@@ -42,17 +50,6 @@ class Client():
     _namespace = '/'
 
     def __init__(self, token):
-        """
-        The ``Client`` initialization creates the basic connection which
-        in this case is a ``SocketIONamespace``. It sets up callbacks for
-        connection and authentication as well as a default callback
-        for handling errors. The default error handler can be removed
-        by ``client.remove_listener('err')``.
-
-        Args:
-            token (str): Authentication token
-        """
-
         self.ready = False
         self.ready_callbacks = []
         self.callbacks = {}
@@ -242,10 +239,9 @@ class Client():
 
 @for_own_methods(on_ready)
 class Provider(Client):
-    """ Heimdallr provider class.
-
+    """
     This class should be used to create a Heimdallr provider.
-    It inherits most of its functionality from the Client but
+    It inherits most of its functionality but it also
     automatically connects to the provider namespace and
     provides some convenience functions.
     """
@@ -333,10 +329,9 @@ class Provider(Client):
 
 @for_own_methods(on_ready)
 class Consumer(Client):
-    """ Heimdallr consumer class.
-
+    """
     This class should be used to create a Heimdallr consumer.
-    It inherits most of its functionality from the Client but
+    It inherits most of its functionality but it also
     automatically connects to the consumer namespace and
     provides some convenience functions.
     """
