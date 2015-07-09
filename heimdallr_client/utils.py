@@ -9,7 +9,8 @@ __all__ = ['timestamp', 'on_ready', 'for_own_methods']
 def timestamp():
     """ Generates an ISO 8601 timestamp for the current UTC time.
 
-    :return: str ISO 8601 timestamp
+    Returns:
+        str: ISO 8601 timestamp
     """
 
     return datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -26,8 +27,11 @@ def on_ready(method):
     methods will be called in the same order that they were
     originally called in.
 
-    :type method: __builtin__.instancemethod Method to decorate
-    :return: __builtin__.function Decorated function
+    Args:
+        method (function): Class method to decorate
+
+    Returns:
+        function: The decorated function
     """
 
     @wraps(method)
@@ -51,9 +55,12 @@ def for_own_methods(decorator):
     to methods that are explicitly defined on the class. Any inherited
     methods that aren't overridden or altered will not be decorated.
 
-    :type decorator: __builtin__.function Function decorator to be applied to
-        each method of the class
-    :return: __builtin__.function Class decorator
+    Args:
+        decorator (function): Method decorator to be applied to each method
+            of the class
+
+    Returns:
+        function: A class decorator
     """
 
     @wraps(decorator)

@@ -13,7 +13,7 @@ __all__ = ['Client', 'Provider', 'Consumer']
 def _init(self, io):
     self._io = io
     self._callback_by_event = {}
-    self._log_name = Client.url
+    self._log_name = Client._url
     self.initialize()
 
 
@@ -33,32 +33,31 @@ class _SocketIO(SocketIO):
 class Client():
     """ Base class for Heimdallr clients.
 
-    The Client class provides most of the behavior for Heimdallr clients.
+    The ``Client`` class provides most of the behavior for Heimdallr clients.
     However, it is not intended to be used directly.
     """
 
-    url = 'https://heimdallr.co'
-    auth_source = 'heimdallr'
-    namespace = '/'
+    _url = 'https://heimdallr.co'
+    _auth_source = 'heimdallr'
+    _namespace = '/'
 
     def __init__(self, token):
-        """ Initializes the connection and sets up default callbacks.
-
-        The Client initialization creates the basic connection which
-        in this case is a SocketIONamespace. It sets up callbacks for
+        """
+        The ``Client`` initialization creates the basic connection which
+        in this case is a ``SocketIONamespace``. It sets up callbacks for
         connection and authentication as well as a default callback
         for handling errors. The default error handler can be removed
-        by `client.remove_listener('err')`.
+        by ``client.remove_listener('err')``.
 
-        :type token: str Authentication token
-        :return: Client
+        Args:
+            token (str): Authentication token
         """
 
         self.ready = False
         self.ready_callbacks = []
         self.callbacks = {}
         self.token = token
-        self.connection = SocketIONamespace(None, self.namespace)
+        self.connection = SocketIONamespace(None, self._namespace)
 
         @self.on('err')
         def fn(err):
@@ -77,37 +76,39 @@ class Client():
         def fn(*args):
             self.connection.emit(
                 'authorize',
-                {'token': self.token, 'authSource': self.auth_source}
+                {'token': self.token, 'authSource': self._auth_source}
             )
 
     def run(self, seconds=None, **kwargs):
         """ Main loop for a client.
 
-        The `run` method is the main loop for a client and is where
+        The ``run`` method is the main loop for a client and is where
         all communication between the Heimdallr server and client
-        takes place. The `run` method is just a proxy for the
-        SocketIO-Client `wait` method so you can call it with the
-        same arguments. However, an additional `event` option has
-        been added. If a `threading.Event` object is passed in as
-        `event`, the wait loop will terminate once the flag is set.
+        takes place. The ``run`` method is just a proxy for the
+        ``SocketIO.wait`` method so you can call it with the
+        same arguments. However, an additional ``event`` option has
+        been added. If a :py:class:`threading.Event` object is passed in for
+        ``event``, the wait loop will terminate once the flag is set.
+
+        Args:
+            seconds (float): Number of seconds to loop for
+            event (:py:class:`threading.Event`): Triggers the exit of the run
+                loop when the flag is set
+            for_connect (bool): Run until the SocketIO connect event
+            for_callback (bool): Run until the server has acknowledged all
+                emits
+
+        :returns: :class:`Client <Client>`
+
+        **Usage:**
+
+        .. code-block:: python
 
             client.run(1)  # Loops for 1 second
             from threading import Event
             event = Event()
             client.run(event=event)  # Loops until event.is_set() is True
             client.run()  # Loops forever
-
-        :type seconds: number or None The number of seconds to loop for
-        :param \**kwargs: See below
-        :return: Client
-
-        :Keyword Arguments:
-            * *event* (``Event``) --
-              Event that can be used to trigger the exit of the run loop
-            * *for_connect* (``bool``) --
-              Run until the SocketIO connect event
-            * *for_callback* (``bool``) --
-              Run until the server has acknowledged all emits
         """
 
         kwargs['seconds'] = seconds
@@ -118,17 +119,17 @@ class Client():
     def connect(self):
         """ Connect to the Heimdallr server.
 
-        The `connect` method blocks until the the socket connection
+        The ``connect`` method blocks until the the socket connection
         to the server has been established.
 
-        :return: Client
+        :returns: :class:`Client <Client>`
         """
 
-        parsed = urlparse(self.url)
+        parsed = urlparse(self._url)
         io = _SocketIO(parsed.hostname, parsed.port)
         io._namespace = self.connection
-        io._namespace_by_path[self.namespace] = self.connection
-        io.connect(self.namespace)
+        io._namespace_by_path[self._namespace] = self.connection
+        io.connect(self._namespace)
         io.wait(for_connect=True)
         self.connection._io = io
 
@@ -137,14 +138,14 @@ class Client():
     def __trigger_callbacks(self, message_name, *args):
         """ Call all of the callbacks for a socket.io message.
 
-        A version of this method curried with `message_name`
-        is given to the underlying SocketIO-Client. When the
-        SocketIO-Client calls it each of the callbacks that
-        have been attached to `message_name` will be called.
+        A version of this method curried with ``message_name``
+        is given to the underlying ``SocketIONamespace``. When the
+        ``SocketIONamespace`` calls it each of the callbacks that
+        have been attached to ``message_name`` will be called.
 
-        :type message_name: str Name of the socket.io message to listen for
-        :param args: Data sent with message
-        :return: None
+        Args:
+            message_name (str): Name of the socket.io message to listen for
+            args: Data sent with message
         """
 
         callbacks = self.callbacks.get(message_name, [])
@@ -152,18 +153,18 @@ class Client():
             callback(*args)
 
     def __on(self, message_name, callback):
-        """ Store `callback` and register a placeholder callback.
+        """ Store ``callback`` and register a placeholder callback.
 
-        Appends `callback` to the list of callbacks for the
-        given `message_name`. Also assigns a placeholder
-        callback to the underlying SocketIO-Client so that
+        Appends ``callback`` to the list of callbacks for the
+        given ``message_name``. Also assigns a placeholder
+        callback to the underlying ``SocketIONamespace`` so that
         the placeholder can call all of the callbacks in
         the list.
 
-        :type message_name: str Name of the socket.io message to listen for
-        :type callback: __builtin__.function or __builtin__.instancemethod
-            Callback to be run when the socket.io message is heard
-        :return: None
+        Args:
+            message_name (str): Name of the socket.io message to listen for
+            callback (function): Callback to be run when the socket.io message
+                is heard
         """
 
         self.callbacks.setdefault(message_name, [])
@@ -176,11 +177,22 @@ class Client():
     def on(self, message_name, callback=None):
         """ Add a socket.io message listener.
 
-        The `on` method will add a callback for socket.io messages
+        The ``on`` method will add a callback for socket.io messages
         of the specified message name. Multiple callbacks can be
         added for the same message name. They will be triggered
         in the order in which they were added. This method can be
         called outright or it can be used as a decorator.
+
+        Args:
+            message_name (str): Name of the socket.io message to listen for
+            callback (function): Callback to run when the socket.io
+                message is heard
+                
+        :returns: :class:`Client <Client>`
+
+        **Usage:**
+
+        .. code-block:: python
 
             def first(*args):
                 print 'FIRST'
@@ -190,12 +202,6 @@ class Client():
             @client.on('myMessage')
             def second(*args):
                 print 'SECOND'
-
-        :type message_name: str Name of the socket.io message to listen for
-        :type callback: __builtin__.NoneType or __builtin__.instancemethod
-            or __builtin__.function Callback to run when the socket.io
-            message is heard
-        :return: Client
         """
 
         # Decorator syntax
@@ -212,15 +218,16 @@ class Client():
     def remove_listener(self, message_name, callback=None):
         """ Remove listener for socket.io message.
 
-        If `callback` is specified, only the callbacks registered
-        for `message_name` that match `callback` will be removed.
-        If only `message_name` is specified, all of the callbacks
+        If ``callback`` is specified, only the callbacks registered
+        for ``message_name`` that match ``callback`` will be removed.
+        If only ``message_name`` is specified, all of the callbacks
         will be removed.
 
-        :type message_name: str Name of the socket.io message to remove
-        :param callback: None or __builtin__.function, optional, Specific
-            callback to remove
-        :return: Client
+        Args:
+            message_name (str): Name of the socket.io message to remove
+            callback (function): Specific callback to remove
+
+        :returns: :class:`Client <Client>`
         """
 
         if callback:
@@ -243,19 +250,21 @@ class Provider(Client):
     provides some convenience functions.
     """
 
-    namespace = '/provider'
+    _namespace = '/provider'
 
     def send_event(self, subtype, data=None):
         """ Emit a Heimdallr event packet.
 
         This will send a Heimdallr event packet to the
         Heimdallr server where it will be rebroadcast.
-        `data` must adhere to the provider's schema for
-        the given `subtype`.
+        ``data`` must adhere to the provider's schema for
+        the given ``subtype``.
 
-        :param subtype: str The event packet subtype
-        :param data: The event packet data
-        :return: Provider
+        Args:
+            subtype (str): The event packet subtype
+            data: The event packet data
+
+        :returns: :class:`Provider <Provider>`
         """
 
         self.connection.emit(
@@ -268,12 +277,14 @@ class Provider(Client):
 
         This will send a Heimdallr sensor packet to the
         Heimdallr server where it will be rebroadcast.
-        `data` must adhere to the provider's schema for
-        the given `subtype`.
+        ``data`` must adhere to the provider's schema for
+        the given ``subtype``.
 
-        :param subtype: str The sensor packet subtype
-        :param data: The sensor packet data
-        :return: Provider
+        Args:
+            subtype (str): The sensor packet subtype
+            data: The sensor packet data
+
+        :returns: :class:`Provider <Provider>`
         """
 
         self.connection.emit(
@@ -285,13 +296,15 @@ class Provider(Client):
         """ Send binary data to the Heimdallr server.
 
         This should only be used when the Heimdallr server
-        has issued a `{'stream': 'start'}` control packet
+        has issued a ``{'stream': 'start'}`` control packet
         and should stop being used when the Heimdallr
-        server issues a `{'stream': 'start'}` control
+        server issues a ``{'stream': 'start'}`` control
         packet.
 
-        :param data: The binary data to be sent.
-        :return: Provider
+        Args:
+            data: The binary data to be sent.
+
+        :returns: :class:`Provider <Provider>`
         """
 
         self.connection.emit(
@@ -303,11 +316,13 @@ class Provider(Client):
         """ Signal the Heimdallr server that a control has been completed.
 
         This should be used when a control that has a persistent
-        field set to `uuid` has been completed..
+        field set to ``uuid`` has been completed.
 
-        :param uuid: UUID of the persistent control packet that has been
-            completed
-        :return: Provider
+        Args:
+            uuid (str): UUID of the persistent control packet that has been
+                completed
+                
+        :returns: :class:`Provider <Provider>`
         """
 
         self.connection.emit(
@@ -326,24 +341,26 @@ class Consumer(Client):
     provides some convenience functions.
     """
 
-    namespace = '/consumer'
+    _namespace = '/consumer'
 
     def send_control(self, uuid, subtype, data=None, persistent=False):
         """ Emit a Heimdallr control packet.
 
         This will send a control to the provider specified by
-        `uuid`. `data` must adhere to the provider's schema
-        for the given `subtype`. If `persistent` is `True`,
+        ``uuid``. ``data`` must adhere to the provider's schema
+        for the given ``subtype``. If `persistent` is ``True``,
         the control packet will be sent immediately and then
         again every time the provider connects until the
         provider signals the Heimdallr server that it has
         completed the control.
 
-        :param uuid: str UUID of the provider to send the control packet to
-        :param subtype: str The control packet subtype
-        :param data: The control packet data
-        :param persistent: Whether or not the control should persist
-        :return: Consumer
+        Args:
+            uuid (str): UUID of the provider to send the control packet to
+            subtype (str): The control packet subtype
+            data: The control packet data
+            persistent (bool): Whether or not the control should persist
+            
+        :returns: :class:`Consumer <Consumer>`
         """
 
         self.connection.emit(
@@ -363,8 +380,10 @@ class Consumer(Client):
         receives event or sensor packets from the provider
         or can send control packets to the provider.
 
-        :param uuid: str UUID of the provider to subscribe to
-        :return: Consumer
+        Args:
+            uuid (str): UUID of the provider to subscribe to
+            
+        :returns: :class:`Consumer <Consumer>`
         """
 
         self.connection.emit(
@@ -380,8 +399,11 @@ class Consumer(Client):
         be done automatically by the Heimdallr server on
         disconnect.
 
-        :param uuid: str UUID of the provider to subscribe to
-        :return: Consumer
+
+        Args:
+            uuid (str): UUID of the provider to subscribe to
+
+        :returns: :class:`Consumer <Consumer>`
         """
 
         self.connection.emit(
@@ -398,10 +420,12 @@ class Consumer(Client):
         strings of the subtypes that you want to hear for the
         provider given by `uuid`.
 
-        :type uuid: str UUID of the provider to filter packets from
-        :type filter: dict Dictionary containing event and/or sensor packet
-            subtypes that you want to receive
-        :return: Consumer
+        Args:
+            uuid (str): UUID of the provider to filter packets from
+            filter (dict): Dictionary containing event and/or sensor packet
+                subtypes that you want to receive
+
+        :returns: :class:`Consumer <Consumer>`
         """
 
         filter_['provider'] = uuid
@@ -417,9 +441,11 @@ class Consumer(Client):
         event packet of that subtype will be sent to the consumer by
         the Heimdallr server.
 
-        :param uuid: str UUID of the provider to get the state of
-        :param subtypes: list Event subtypes to get the state of
-        :return: Consumer
+        Args:
+            uuid (str): UUID of the provider to get the state of
+            subtypes (list): Event subtypes to get the state of
+
+        :returns: :class:`Consumer <Consumer>`
         """
 
         self.connection.emit(
@@ -432,10 +458,12 @@ class Consumer(Client):
 
         If this is the first consumer to join the stream of
         a provider, the Heimdallr server will send a
-        `{'stream': 'start'}` control packet to the provider.
+        ``{'stream': 'start'}`` control packet to the provider.
 
-        :param uuid: str UUID of the provider to join the stream of
-        :return: Consumer
+        Args:
+            uuid (str): UUID of the provider to join the stream of
+
+        :returns: :class:`Consumer <Consumer>`
         """
 
         self.connection.emit(
@@ -448,14 +476,16 @@ class Consumer(Client):
 
         If this is the last consumer to leave the stream for a
         provider the Heimdallr server will send a
-        `{'stream': 'stop'}` control packet to the provider.
+        ``{'stream': 'stop'}`` control packet to the provider.
         This will be done automatically by the Heimdallr server
         on disconnect.
 
-        :param uuid: str UUID of the provider to leave the stream of
-        :return: Consumer
+        Args:
+            uuid (str): UUID of the provider to leave the stream of
+
+        :returns: :class:`Consumer <Consumer>`
         """
-        
+
         self.connection.emit(
             'leaveStream',
             {'provider': uuid}

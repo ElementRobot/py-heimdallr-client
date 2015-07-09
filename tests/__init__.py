@@ -13,7 +13,7 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 PORT = 3000
 UUID = 'c7528fa8-0a7b-4486-bbdc-460905ffa035'
 
-Client.url = 'http://localhost:%s' % PORT
+Client._url = 'http://localhost:%s' % PORT
 shared = {}
 
 
