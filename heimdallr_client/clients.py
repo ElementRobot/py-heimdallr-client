@@ -417,7 +417,7 @@ class Consumer(Client):
 
         Args:
             uuid (str): UUID of the provider to filter packets from
-            filter (dict): Dictionary containing event and/or sensor packet
+            filter_ (dict): Dictionary containing event and/or sensor packet
                 subtypes that you want to receive
 
         :returns: :class:`Consumer <Consumer>`

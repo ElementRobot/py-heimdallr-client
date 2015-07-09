@@ -1,7 +1,7 @@
 import inspect
-from functools import wraps, partial
+from functools import partial
 from datetime import datetime
-
+from wrapt import decorator
 
 __all__ = ['timestamp', 'on_ready', 'for_own_methods']
 
@@ -16,12 +16,13 @@ def timestamp():
     return datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def on_ready(method):
-    """ Decorator that ensures methods are only called once the client is ready.
+@decorator
+def on_ready(method, self, args, kwargs):
+    """ on_ready(method)
 
-    This decorator will prevent a method from being called before
-    the client is ready. If the client is ready when the decorator
-    is called, the method will be evaluated immediately. If the
+    Decorator that ensures methods are only called once the client
+    is ready. If the client is ready when the method is first
+    called, the method will be evaluated immediately. If the
     client is not ready, the method will be postponed until the
     client is ready. Once the client is ready, the postponed
     methods will be called in the same order that they were
@@ -34,19 +35,15 @@ def on_ready(method):
         function: The decorated function
     """
 
-    @wraps(method)
-    def decorate(self, *args, **kwargs):
-        if self.ready:
-            method(self, *args, **kwargs)
-        else:
-            self.ready_callbacks.append(partial(method, self, *args, **kwargs))
-        return self
-
-    return decorate
+    if self.ready:
+        method(*args, **kwargs)
+    else:
+        self.ready_callbacks.append(partial(method, *args, **kwargs))
+    return self
 
 
 # From http://stackoverflow.com/a/30764825/4059062
-def for_own_methods(decorator):
+def for_own_methods(method_decorator):
     """ Decorates all the methods in a class.
 
     This function takes a function decorator and returns a class
@@ -56,20 +53,19 @@ def for_own_methods(decorator):
     methods that aren't overridden or altered will not be decorated.
 
     Args:
-        decorator (function): Method decorator to be applied to each method
-            of the class
+        method_decorator (function): Method decorator to be applied to
+            each method of the class
 
     Returns:
         function: A class decorator
     """
 
-    @wraps(decorator)
     def decorate(cls):
         def predicate(member):
             return inspect.ismethod(member) and member.__name__ in cls.__dict__
 
         for name, method in inspect.getmembers(cls, predicate):
-            setattr(cls, name, decorator(method))
+            setattr(cls, name, method_decorator(method))
         return cls
 
     return decorate
