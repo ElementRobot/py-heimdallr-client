@@ -305,7 +305,7 @@ class Provider(Client):
 
         self.connection.emit(
             'stream',
-            data
+            bytearray(data)
         )
 
     def completed(self, uuid):

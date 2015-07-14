@@ -40,7 +40,7 @@ io.of('/provider').on('connect', function (socket) {
             socket.emit('heardSensor', packet);
         });
     }).on('stream', function (data) {
-        if (data === '!') {
+        if (data.constructor === Buffer.prototype.constructor) {
             socket.emit('heardStream');
         }
     });

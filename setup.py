@@ -26,5 +26,6 @@ setup(
         'pyopenssl',
         'ndg-httpsclient',
         'pyasn1'
-    ]
+    ],
+    tests_require=['coverage']
 )
