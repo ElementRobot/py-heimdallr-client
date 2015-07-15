@@ -69,12 +69,35 @@ class Client():
             while self.ready_callbacks:
                 self.ready_callbacks.pop(0)()
 
-        @self.on('connect')
-        def fn(*args):
+        def on_connect(*args):
             self.connection.emit(
                 'authorize',
                 {'token': self.token, 'authSource': self._auth_source}
             )
+
+        self.on('connect', on_connect)
+        self.on('reconnect', on_connect)
+
+    def connect(self):
+        """ Connect to the Heimdallr server.
+
+        The ``connect`` method blocks until the the socket connection
+        to the server has been established.
+
+        :returns: :class:`Client <Client>`
+        """
+
+        parsed = urlparse(self._url)
+        if self.connection._io and self.connection._io.connected:
+            self.connection.disconnect()
+        self.connection._io = _SocketIO(parsed.hostname, parsed.port)
+        io = self.connection._io
+        io._namespace = self.connection
+        io._namespace_by_path[self._namespace] = self.connection
+        io.connect(self._namespace)
+        io.wait(for_connect=True)
+
+        return self
 
     def run(self, seconds=None, **kwargs):
         """ Main loop for a client.
@@ -110,25 +133,6 @@ class Client():
 
         kwargs['seconds'] = seconds
         self.connection._io.wait(**kwargs)
-
-        return self
-
-    def connect(self):
-        """ Connect to the Heimdallr server.
-
-        The ``connect`` method blocks until the the socket connection
-        to the server has been established.
-
-        :returns: :class:`Client <Client>`
-        """
-
-        parsed = urlparse(self._url)
-        self.connection._io = _SocketIO(parsed.hostname, parsed.port)
-        io = self.connection._io
-        io._namespace = self.connection
-        io._namespace_by_path[self._namespace] = self.connection
-        io.connect(self._namespace)
-        io.wait(for_connect=True)
 
         return self
 
