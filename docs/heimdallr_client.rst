@@ -9,24 +9,24 @@ heimdallr_client package
 Submodules
 ----------
 
-heimdallr_client.clients module
--------------------------------
+heimdallr_client.clients
+------------------------
 
 .. automodule:: heimdallr_client.clients
     :members:
     :undoc-members:
     :show-inheritance:
 
-heimdallr_client.exceptions module
-----------------------------------
+heimdallr_client.exceptions
+---------------------------
 
 .. automodule:: heimdallr_client.exceptions
     :members:
     :undoc-members:
     :show-inheritance:
 
-heimdallr_client.utils module
------------------------------
+heimdallr_client.utils
+----------------------
 
 .. automodule:: heimdallr_client.utils
     :members:
