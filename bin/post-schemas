@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+import argparse
+import json
+import sys
+
+from heimdallr_client import utils, settings
+
+description = '''
+Command line utility for posting packet schemas to
+the Heimdallr server. The files
+should be .json files containing a single JSON
+object. The top-level keys should be one or more
+of "event", "sensor", and "control". The value of
+these fields should be a JSON object whose keys
+are the names of the packet subtypes and whose
+values are valid JSON schema.
+'''
+
+parser = argparse.ArgumentParser(description=description)
+parser.add_argument(
+    'token',
+    help='Authentication token'
+)
+parser.add_argument(
+    '-u',
+    '--uuids',
+    help='UUID(s) of the providers that the schemas are for',
+    nargs='+'
+)
+parser.add_argument(
+    '-f',
+    '--files',
+    help='File(s) containing the packet schemas',
+    nargs='+',
+    type=file
+)
+parser.add_argument(
+    '-a',
+    '--auth-source',
+    help=argparse.SUPPRESS,
+    default='heimdallr'
+)
+parser.add_argument('--url', help=argparse.SUPPRESS)
+args = parser.parse_args()
+
+settings.AUTH_SOURCE = args.auth_source or settings.AUTH_SOURCE
+settings.URL = args.url or settings.URL
+
+packet_schemas = {}
+for f in args.files:
+    packet_schemas.update(json.load(f))
+
+results = utils.post_schemas(args.token, args.uuids, packet_schemas)
+
+stdout = 'SUCCESS:\n'
+stderr = 'ERROR:\n'
+for uuid, response in results.iteritems():
+    data = response.json()
+    if response:
+        stdout += '    %s: %s\n' % (uuid, response.status_code)
+    elif data and 'error' in data:
+        stderr += '    %s: %s\n' % (uuid, data['error'])
+    else:
+        stderr += '    %s: %s %s\n' % (
+            uuid, response.status_code, response.body
+        )
+
+sys.stdout.write(stdout)
+sys.stderr.write(stderr)

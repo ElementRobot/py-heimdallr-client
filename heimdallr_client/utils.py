@@ -1,7 +1,11 @@
 import inspect
+import requests
+import json
 from functools import partial
 from datetime import datetime
 from wrapt import decorator
+
+from settings import AUTH_SOURCE, URL
 
 __all__ = ['timestamp', 'on_ready', 'for_own_methods']
 
@@ -69,3 +73,20 @@ def for_own_methods(method_decorator):
         return cls
 
     return decorate
+
+
+def post_schemas(token, uuids, packet_schemas):
+    results = {}
+    for uuid in uuids:
+        for packet_type, schemas in packet_schemas.iteritems():
+            results[uuid] = requests.post(
+                '%sprovider/%s/subtype-schemas' % (URL, uuid),
+                data=json.dumps(
+                    {'packetType': packet_type, 'subtypeSchemas': schemas}
+                ),
+                headers={
+                    'content-type': 'application/json',
+                    'authorization': 'Token %s' % token
+                }
+            )
+    return results

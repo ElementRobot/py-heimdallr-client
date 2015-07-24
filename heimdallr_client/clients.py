@@ -5,6 +5,7 @@ from socketIO_client import SocketIO, SocketIONamespace, EngineIONamespace
 
 from exceptions import HeimdallrClientException
 from utils import timestamp, for_own_methods, on_ready
+from settings import AUTH_SOURCE, URL
 
 
 __all__ = ['Client', 'Provider', 'Consumer']
@@ -45,8 +46,8 @@ class Client():
         token (str): Authentication token
     """
 
-    _url = 'https://heimdallr.co'
-    _auth_source = 'heimdallr'
+    _url = URL
+    _auth_source = AUTH_SOURCE
     _namespace = '/'
 
     def __init__(self, token):

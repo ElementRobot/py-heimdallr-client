@@ -27,5 +27,6 @@ setup(
         'ndg-httpsclient',
         'pyasn1'
     ],
-    tests_require=['coverage']
+    tests_require=['coverage'],
+    scripts=['bin/post-schemas']
 )
