@@ -1,13 +1,10 @@
-heimdallr_client package
+Heimdallr Client Package
 ========================
 
 .. automodule:: heimdallr_client
     :members:
     :undoc-members:
     :show-inheritance:
-
-Submodules
-----------
 
 heimdallr_client.clients
 ------------------------
