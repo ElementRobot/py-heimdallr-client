@@ -1,4 +1,10 @@
+# Install heimdallr_client for development. To undo run `python setup.py develop -u` (this won't remove the post-schemas script).
 -e .
 
+# For Documentation
 sphinx
+sphinx_rtd_theme
 recommonmark
+
+# For Tests
+coverage
