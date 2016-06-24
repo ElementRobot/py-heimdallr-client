@@ -1,9 +1,13 @@
 from setuptools import setup, find_packages
 
+with open('README.rst') as f:
+    long_description = f.read()
+
 setup(
     name='py-heimdallr-client',
     version='0.0.0',
     description='Python API for Heimdallr',
+    long_description=long_description,
     url='https://github.com/ElementRobot/py-heimdallr-client',
     author='Element Robot LLC',
     author_email='dev@elementrobot.co',
@@ -18,7 +22,7 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools'
     ],
-    keywords='heimdallr rtc websockets',
+    keywords=['heimdallr', 'rtc', 'websockets'],
     packages=find_packages(exclude=['tests/*']),
     install_requires=[
         'socketIO-client-2',
