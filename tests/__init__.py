@@ -339,3 +339,7 @@ class ConsumerTestCase(HeimdallrClientTestCase):
             getattr(self.consumer, action)(UUID)
 
         self.wait_for_packet()
+
+
+if __name__ == '__main__':
+    unittest.main()
