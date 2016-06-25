@@ -91,7 +91,10 @@ class Client():
         parsed = urlparse(self._url)
         if self.connection._io and self.connection._io.connected:
             self.connection.disconnect()
-        self.connection._io = _SocketIO(parsed.hostname, parsed.port)
+        self.connection._io = _SocketIO(
+            '%s://%s' % (parsed.scheme, parsed.hostname),
+            parsed.port
+        )
         io = self.connection._io
         io._namespace = self.connection
         io._namespace_by_path[self._namespace] = self.connection
