@@ -27,7 +27,6 @@ setup(
     install_requires=[
         'socketIO-client-2',
         'wrapt',
-        'ndg-httpsclient',
         'pyasn1'
     ],
     test_suite='tests',
