@@ -49,6 +49,7 @@ class Client():
     _url = URL
     _auth_source = AUTH_SOURCE
     _namespace = '/'
+    _safe = True
 
     def __init__(self, token):
         self.ready = False
@@ -56,6 +57,20 @@ class Client():
         self.callbacks = {}
         self.token = token
         self.connection = SocketIONamespace(None, self._namespace)
+
+        emit = self.connection.emit
+
+        def safe_emit(*args, **kwargs):
+            try:
+                emit(*args, **kwargs)
+            except Exception as e:
+                print (
+                    'HeimdallrClient failed to send. Original exception: %s'
+                    % e.message
+                )
+
+        if self._safe:
+            self.connection.emit = safe_emit
 
         @self.on('err')
         def fn(err):
@@ -91,19 +106,25 @@ class Client():
         :returns: :class:`Client <Client>`
         """
 
-        parsed = urlparse(self._url)
-        if self.connection._io and self.connection._io.connected:
-            self.connection.disconnect()
-        self.connection._io = _SocketIO(
-            '%s://%s' % (parsed.scheme, parsed.hostname),
-            parsed.port,
-            **kwargs
-        )
-        io = self.connection._io
-        io._namespace = self.connection
-        io._namespace_by_path[self._namespace] = self.connection
-        io.connect(self._namespace)
-        io.wait(for_connect=True)
+        try:
+            parsed = urlparse(self._url)
+            if self.connection._io and self.connection._io.connected:
+                self.connection.disconnect()
+            self.connection._io = _SocketIO(
+                '%s://%s' % (parsed.scheme, parsed.hostname),
+                parsed.port,
+                **kwargs
+            )
+            io = self.connection._io
+            io._namespace = self.connection
+            io._namespace_by_path[self._namespace] = self.connection
+            io.connect(self._namespace)
+            io.wait(for_connect=True)
+        except Exception as e:
+            if not self._safe:
+                raise e
+
+            print 'HeimdallrClient failed to connect: %s' % e.message
 
         return self
 

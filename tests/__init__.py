@@ -18,6 +18,7 @@ UUID = 'c7528fa8-0a7b-4486-bbdc-460905ffa035'
 CONNECT_KWARGS = {'verify': './certs/localhost-cert.pem'}
 
 Client._url = 'https://localhost:%s' % PORT
+Client._safe = False
 shared = {}
 
 
