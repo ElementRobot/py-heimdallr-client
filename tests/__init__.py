@@ -15,7 +15,7 @@ urllib3.disable_warnings(urllib3.exceptions.SubjectAltNameWarning)
 DIR = os.path.dirname(os.path.realpath(__file__))
 PORT = 3000
 UUID = 'c7528fa8-0a7b-4486-bbdc-460905ffa035'
-CONNECT_KWARGS = {'verify': './certs/localhost-cert.pem'}
+CONNECT_KWARGS = {'verify': os.path.join(DIR, 'certs/localhost-cert.pem')}
 
 Client._url = 'https://localhost:%s' % PORT
 Client._safe = False

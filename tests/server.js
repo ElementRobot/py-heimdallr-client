@@ -14,8 +14,8 @@ var sockets = {},
     io;
 
 app = https.createServer({
-    key: fs.readFileSync('certs/localhost-key.pem'),
-    cert: fs.readFileSync('certs/localhost-cert.pem')
+    key: fs.readFileSync(__dirname + '/certs/localhost-key.pem'),
+    cert: fs.readFileSync(__dirname + '/certs/localhost-cert.pem')
 }, function (req, res) {
     res.writeHead(200);
     res.end('py-heimdallr-client test server');
