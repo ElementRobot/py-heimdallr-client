@@ -79,11 +79,14 @@ class Client():
         self.on('connect', on_connect)
         self.on('reconnect', on_connect)
 
-    def connect(self):
+    def connect(self, **kwargs):
         """ Connect to the Heimdallr server.
 
         The ``connect`` method blocks until the the socket connection
         to the server has been established.
+
+        Args:
+            **kwargs: Passed to underlying SocketIO constructor
 
         :returns: :class:`Client <Client>`
         """
@@ -93,7 +96,8 @@ class Client():
             self.connection.disconnect()
         self.connection._io = _SocketIO(
             '%s://%s' % (parsed.scheme, parsed.hostname),
-            parsed.port
+            parsed.port,
+            **kwargs
         )
         io = self.connection._io
         io._namespace = self.connection

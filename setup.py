@@ -27,7 +27,6 @@ setup(
     install_requires=[
         'socketIO-client-2',
         'wrapt',
-        'pyopenssl',
         'ndg-httpsclient',
         'pyasn1'
     ],

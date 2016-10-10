@@ -21,7 +21,7 @@ virtualenv installed and setup can run:
 
     mkvirtualenv py-heimdallr-client
     workon py-heimdallr-client
-    git clone git@github.com:ElementRobot/py-heimdallr-client.git
+    git clone git@github.com:Layer3DLab/py-heimdallr-client.git
     cd py-heimdallr-client
     git checkout develop
     npm install

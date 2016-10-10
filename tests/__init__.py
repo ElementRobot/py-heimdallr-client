@@ -4,16 +4,20 @@ import json
 from subprocess import Popen, PIPE
 from threading import Event
 from functools import partial
+from requests.packages import urllib3
 
 from heimdallr_client import Client, Provider, Consumer, HeimdallrClientException
 
+# Turn off SubjectAltNameWarning
+urllib3.disable_warnings(urllib3.exceptions.SubjectAltNameWarning)
 
 # Setup test server
 DIR = os.path.dirname(os.path.realpath(__file__))
 PORT = 3000
 UUID = 'c7528fa8-0a7b-4486-bbdc-460905ffa035'
+CONNECT_KWARGS = {'verify': './certs/localhost-cert.pem'}
 
-Client._url = 'http://localhost:%s' % PORT
+Client._url = 'https://localhost:%s' % PORT
 shared = {}
 
 
@@ -69,7 +73,7 @@ class ProviderTestCase(HeimdallrClientTestCase):
         super(ProviderTestCase, self).setUp()
         self.client_type = 'provider'
         self.provider = Provider('valid-token')
-        self.provider.connect()
+        self.provider.connect(**CONNECT_KWARGS)
         self.client = self.provider
 
     def tearDown(self):
@@ -147,7 +151,7 @@ class ProviderTestCase(HeimdallrClientTestCase):
             self.packet_received.set()
 
         provider.send_event('test').send_sensor('test')
-        provider.connect()
+        provider.connect(**CONNECT_KWARGS)
         self.wait_for_packet(provider)
 
     def test_multiple_listeners(self):
@@ -200,7 +204,7 @@ class ConsumerTestCase(HeimdallrClientTestCase):
         super(ConsumerTestCase, self).setUp()
         self.client_type = 'consumer'
         self.consumer = Consumer('valid-token')
-        self.consumer.connect()
+        self.consumer.connect(**CONNECT_KWARGS)
         self.client = self.consumer
 
     def tearDown(self):
@@ -267,7 +271,7 @@ class ConsumerTestCase(HeimdallrClientTestCase):
             self.packet_received.set()
 
         consumer.send_control(UUID, 'test').subscribe(UUID)
-        consumer.connect()
+        consumer.connect(**CONNECT_KWARGS)
         consumer.send_control(UUID, 'ping')
         self.wait_for_packet(consumer)
 

@@ -1,14 +1,27 @@
 "use strict";
 
 var PORT = process.env.PORT,
-    io = require('socket.io').listen(PORT),
+    https = require('https'),
+    fs = require('fs'),
+    socketIo = require('socket.io'),
     _ = require('lodash'),
     readline = require('readline'),
     validator = require('heimdallr-validator');
 
 var sockets = {},
-    input;
+    input,
+    app,
+    io;
 
+app = https.createServer({
+    key: fs.readFileSync('certs/localhost-key.pem'),
+    cert: fs.readFileSync('certs/localhost-cert.pem')
+}, function (req, res) {
+    res.writeHead(200);
+    res.end('py-heimdallr-client test server');
+}).listen(PORT);
+
+io = socketIo(app);
 io.of('/provider').on('connect', function (socket) {
     sockets.provider = socket;
 
