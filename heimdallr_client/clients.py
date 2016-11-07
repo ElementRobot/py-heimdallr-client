@@ -1,4 +1,4 @@
-import Queue
+from Queue import Queue
 from threading import _Event, Thread
 from urlparse import urlparse
 from functools import partial
@@ -60,10 +60,10 @@ class Client():
         self.connection = SocketIONamespace(None, self._namespace)
 
         # Handle sending packets asynchronously
-        self.__emit_queue = Queue()
-        self.__emit_worker = Thread(target=self.__emit_task)
-        self.__emit_worker.daemon = True
-        self.__emit_worker.start()
+        self._emit_queue = Queue()
+        self._emit_worker = Thread(target=self._emit_task)
+        self._emit_worker.daemon = True
+        self._emit_worker.start()
 
         emit = self.connection.emit
 
@@ -93,7 +93,7 @@ class Client():
                 self.ready_callbacks.pop(0)()
 
         def on_connect(*args):
-            self.__emit_queue.put((
+            self._emit_queue.put((
                 'authorize',
                 {'token': self.token, 'authSource': self._auth_source}
             ))
@@ -103,7 +103,7 @@ class Client():
 
     def __del__(self):
         # Cleanup thread
-        self.__emit_worker._Thread__stop()
+        self._emit_worker._Thread__stop()
 
     def connect(self, **kwargs):
         """ Connect to the Heimdallr server.
@@ -176,9 +176,9 @@ class Client():
 
         return self
 
-    def __emit_task(self):
+    def _emit_task(self):
         while True:
-            args = self.__emit_queue.get()
+            args = self._emit_queue.get()
             self.connection.emit(*args)
 
     def __trigger_callbacks(self, message_name, *args):
@@ -312,7 +312,7 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'event',
             {'subtype': subtype, 'data': data, 't': timestamp()}
         ))
@@ -332,7 +332,7 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'sensor',
             {'subtype': subtype, 'data': data, 't': timestamp()}
         ))
@@ -352,7 +352,7 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'stream',
             bytearray(data)
         ))
@@ -370,7 +370,7 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'event',
             {'subtype': 'completed', 'data': uuid, 't': timestamp()}
         ))
@@ -407,7 +407,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'control',
             {
                 'provider': uuid,
@@ -430,7 +430,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'subscribe',
             {'provider': uuid}
         ))
@@ -450,7 +450,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'unsubscribe',
             {'provider': uuid}
         ))
@@ -473,7 +473,7 @@ class Consumer(Client):
         """
 
         filter_['provider'] = uuid
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'setFilter',
             filter_
         ))
@@ -492,7 +492,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'getState',
             {'provider': uuid, 'subtypes': subtypes}
         ))
@@ -510,7 +510,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'joinStream',
             {'provider': uuid}
         ))
@@ -530,7 +530,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.__emit_queue.put((
+        self._emit_queue.put((
             'leaveStream',
             {'provider': uuid}
         ))
