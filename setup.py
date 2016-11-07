@@ -5,7 +5,7 @@ with open('README.rst') as f:
 
 setup(
     name='py-heimdallr-client',
-    version='0.0.1',
+    version='0.0.2',
     description='Python API for Heimdallr',
     long_description=long_description,
     url='https://github.com/ElementRobot/py-heimdallr-client',
