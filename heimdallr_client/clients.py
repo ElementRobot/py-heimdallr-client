@@ -1,4 +1,5 @@
-from threading import _Event
+import Queue
+from threading import _Event, Thread
 from urlparse import urlparse
 from functools import partial
 from socketIO_client import SocketIO, SocketIONamespace, EngineIONamespace
@@ -58,6 +59,12 @@ class Client():
         self.token = token
         self.connection = SocketIONamespace(None, self._namespace)
 
+        # Handle sending packets asynchronously
+        self.__emit_queue = Queue()
+        self.__emit_worker = Thread(target=self.__emit_task)
+        self.__emit_worker.daemon = True
+        self.__emit_worker.start()
+
         emit = self.connection.emit
 
         def safe_emit(*args, **kwargs):
@@ -86,13 +93,17 @@ class Client():
                 self.ready_callbacks.pop(0)()
 
         def on_connect(*args):
-            self.connection.emit(
+            self.__emit_queue.put((
                 'authorize',
                 {'token': self.token, 'authSource': self._auth_source}
-            )
+            ))
 
         self.on('connect', on_connect)
         self.on('reconnect', on_connect)
+
+    def __del__(self):
+        # Cleanup thread
+        self.__emit_worker._Thread__stop()
 
     def connect(self, **kwargs):
         """ Connect to the Heimdallr server.
@@ -164,6 +175,11 @@ class Client():
         self.connection._io.wait(**kwargs)
 
         return self
+
+    def __emit_task(self):
+        while True:
+            args = self.__emit_queue.get()
+            self.connection.emit(*args)
 
     def __trigger_callbacks(self, message_name, *args):
         """ Call all of the callbacks for a socket.io message.
@@ -296,10 +312,10 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'event',
             {'subtype': subtype, 'data': data, 't': timestamp()}
-        )
+        ))
 
     def send_sensor(self, subtype, data=None):
         """ Emit a Heimdallr sensor packet.
@@ -316,10 +332,10 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'sensor',
             {'subtype': subtype, 'data': data, 't': timestamp()}
-        )
+        ))
 
     def send_stream(self, data):
         """ Send binary data to the Heimdallr server.
@@ -336,10 +352,10 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'stream',
             bytearray(data)
-        )
+        ))
 
     def completed(self, uuid):
         """ Signal the Heimdallr server that a control has been completed.
@@ -354,10 +370,10 @@ class Provider(Client):
         :returns: :class:`Provider <Provider>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'event',
             {'subtype': 'completed', 'data': uuid, 't': timestamp()}
-        )
+        ))
 
 
 @for_own_methods(on_ready)
@@ -391,7 +407,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'control',
             {
                 'provider': uuid,
@@ -399,7 +415,7 @@ class Consumer(Client):
                 'data': data,
                 'persistent': persistent
             }
-        )
+        ))
 
     def subscribe(self, uuid):
         """ Subscribe to a provider.
@@ -414,10 +430,10 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'subscribe',
             {'provider': uuid}
-        )
+        ))
 
     def unsubscribe(self, uuid):
         """ Unsubscribe from a provider.
@@ -434,10 +450,10 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'unsubscribe',
             {'provider': uuid}
-        )
+        ))
 
     def set_filter(self, uuid, filter_):
         """ Control which event and sensor subtypes to hear from provider.
@@ -457,10 +473,10 @@ class Consumer(Client):
         """
 
         filter_['provider'] = uuid
-        self.connection.emit(
+        self.__emit_queue.put((
             'setFilter',
             filter_
-        )
+        ))
 
     def get_state(self, uuid, subtypes):
         """ Get the current state of a provider.
@@ -476,10 +492,10 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'getState',
             {'provider': uuid, 'subtypes': subtypes}
-        )
+        ))
 
     def join_stream(self, uuid):
         """ Join binary data stream from a provider.
@@ -494,10 +510,10 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'joinStream',
             {'provider': uuid}
-        )
+        ))
 
     def leave_stream(self, uuid):
         """ Leave binary data stream for a provider.
@@ -514,7 +530,7 @@ class Consumer(Client):
         :returns: :class:`Consumer <Consumer>`
         """
 
-        self.connection.emit(
+        self.__emit_queue.put((
             'leaveStream',
             {'provider': uuid}
-        )
+        ))
